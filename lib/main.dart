@@ -1,21 +1,34 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
-import 'package:sqflite/sqflite.dart';
 import 'helper.dart';
+import 'package:fl_chart/fl_chart.dart';
 
 void main() {
   runApp(const FinanceApp());
 }
 
-class FinanceApp extends StatelessWidget {
-  const FinanceApp({super.key});  // Bracket should not close here
+class FinanceApp extends StatefulWidget {
+  const FinanceApp({super.key});  
+
+  @override
+  _FinanceAppState createState() => _FinanceAppState();
+}
+
+class _FinanceAppState extends State<FinanceApp> {
+  late Future<void> _dbInitFuture;
+  final DatabaseHelper database = DatabaseHelper();
+
+  @override
+  void initState() {
+    super.initState();
+    _dbInitFuture = database.init();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final DatabaseHelper database = DatabaseHelper();  // Initialize DatabaseHelper instance
-
     return FutureBuilder(
-      future: database.init(),  // Ensure the database is initialized
+      future: _dbInitFuture,  
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.done) {
           return MaterialApp(
@@ -25,15 +38,25 @@ class FinanceApp extends StatelessWidget {
               '/visuals': (context) => const GraphScreen(),
             },
           );
+        } else if (snapshot.hasError) {
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(child: Text('Error initializing database')),
+            ),
+          );
         } else {
-          return const Center(child: CircularProgressIndicator());  
+        
+          return const MaterialApp(
+            home: Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            ),
+          );
         }
       },
     );
-  }  // Closing bracket was added here correctly
+  }
 }
 
-// Home Screen
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
@@ -51,7 +74,7 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-//Navigation 
+// Navigation 
 class BottomNavBar extends StatelessWidget {
   const BottomNavBar({super.key});
 
@@ -92,36 +115,39 @@ class DataEntryScreen extends StatefulWidget {
 }
 
 class _DataEntryScreenState extends State<DataEntryScreen> {
-  //TODO: Add more controllers (?)
   final TextEditingController incControl = TextEditingController();
   final TextEditingController expControl = TextEditingController();
+  final TextEditingController debtControl = TextEditingController();
   final TextEditingController savingsControl = TextEditingController();
+  final TextEditingController nameControl = TextEditingController();
 
   @override
   void dispose() {
     incControl.dispose();
     expControl.dispose();
     savingsControl.dispose();
+    debtControl.dispose();
+    nameControl.dispose();
     super.dispose();
   }
 
-Future<void> saveData() async {
-  SharedPreferences prefs = await SharedPreferences.getInstance();
-  
-  int income = int.parse(incControl.text);
-  int expense = int.parse(expControl.text);
-  int savingsGoal = int.parse(savingsControl.text);
-  
-  double incomeSpendingRatio = income / expense;
+  Future<void> saveData() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    
+    int income = int.parse(incControl.text);
+    int expense = int.parse(expControl.text);
+    int savingsGoal = int.parse(savingsControl.text);
+    String name = nameControl.text; 
+    double debt = double.parse(debtControl.text); 
 
-  
-  await prefs.setInt('income', income);
-  await prefs.setInt('expense', expense);
-  await prefs.setInt('savingsGoal', savingsGoal);
-  await prefs.setDouble('income-spending ratio', incomeSpendingRatio);
-}
-
-
+    
+    double incomeSpendingRatio = income / expense;
+    await prefs.setString('name', name);
+    await prefs.setInt('income', income);
+    await prefs.setInt('expense', expense);
+    await prefs.setInt('savingsGoal', savingsGoal);
+    await prefs.setDouble('income-spending ratio', incomeSpendingRatio);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -137,6 +163,11 @@ Future<void> saveData() async {
               keyboardType: TextInputType.number,
             ),
             TextField(
+              controller: incControl,
+              decoration: const InputDecoration(labelText: 'Income'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
               controller: expControl,
               decoration: const InputDecoration(labelText: 'Expenses'),
               keyboardType: TextInputType.number,
@@ -144,6 +175,11 @@ Future<void> saveData() async {
             TextField(
               controller: savingsControl,
               decoration: const InputDecoration(labelText: 'Savings Goal'),
+              keyboardType: TextInputType.number,
+            ),
+            TextField(
+              controller: debtControl,
+              decoration: const InputDecoration(labelText: 'Debt'),
               keyboardType: TextInputType.number,
             ),
             const SizedBox(height: 20),
@@ -203,63 +239,4 @@ class _GraphScreenState extends State<GraphScreen> {
   }
 }
 
-class ProgressBarExample extends StatefulWidget {
-  @override
-  _ProgressBarExampleState createState() => _ProgressBarExampleState();
-}
-
-class _ProgressBarExampleState extends State<ProgressBarExample> {
-  double progress = 0.0; 
-
-  @override
-  void initState() {
-    super.initState();
-    _loadData();
-  }
-
-  Future<void> _loadData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    int income = prefs.getInt('income') ?? 0;
-    int expense = prefs.getInt('expense') ?? 1; 
-    int savingsGoal = prefs.getInt('savingsGoal') ?? 100; 
-
-    // Calculate progress towards savings goal
-    double incomeSpendingRatio = income / expense;
-    double savingsProgress = incomeSpendingRatio / savingsGoal;
-
-    setState(() {
-      progress = savingsProgress.clamp(0.0, 1.0); 
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Savings Progress'),
-      ),
-      body: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Text(
-            'Progress toward your savings goal',
-            style: TextStyle(fontSize: 18),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: LinearProgressIndicator(
-              value: progress, 
-              minHeight: 10.0,
-              backgroundColor: Colors.grey[300],
-              valueColor: AlwaysStoppedAnimation<Color>(Colors.green),
-            ),
-          ),
-          Text(
-            '${(progress * 100).toStringAsFixed(2)}% of goal reached',
-            style: TextStyle(fontSize: 16),
-          ),
-        ],
-      ),
-    );
-  }
-}
+// Other classes (like FiPie, CustomFiPie) remain unchanged
