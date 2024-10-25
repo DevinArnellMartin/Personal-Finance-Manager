@@ -4,6 +4,11 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'helper.dart';
 import 'package:fl_chart/fl_chart.dart';
 
+String custom_title = "";
+// String _x = "";  
+// String _y = ""; 
+// final DatabaseHelper database = DatabaseHelper();
+
 void main() {
   runApp(const FinanceApp());
 }
@@ -67,7 +72,7 @@ class HomeScreen extends StatelessWidget {
         title: const Text('Personal Finance Manager'),
       ),
       body: const Center(
-        child: Text('Here is the tutorial how to use it '),
+        child: Text('Here is the tutorial how to use it '), //Embellish
       ),
       bottomNavigationBar: const BottomNavBar(),
     );
@@ -196,7 +201,7 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
   }
 }
 
-// Graph Screen
+// Graph Screen and Form
 class GraphScreen extends StatefulWidget {
   const GraphScreen({super.key});
 
@@ -239,4 +244,372 @@ class _GraphScreenState extends State<GraphScreen> {
   }
 }
 
-// Other classes (like FiPie, CustomFiPie) remain unchanged
+class FiPie extends StatefulWidget {
+  @override
+  _FiPieState createState() => _FiPieState();
+}
+
+class _FiPieState extends State<FiPie> {
+  final DatabaseHelper database = DatabaseHelper();
+  double income = 0.0;
+  double expenses = 0.0;
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    final double fetchedIncome = await database.getIncome();
+    final double fetchedExpenses = await database.getExpenses();
+
+    setState(() {
+      income = fetchedIncome;
+      expenses = fetchedExpenses;
+      isLoading = false;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text("Income Vs Expense")),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : PieChart(
+              PieChartData(
+                sections: [
+                  PieChartSectionData(
+                    value: income,
+                    color: Colors.green,
+                    title: "Income",
+                  ),
+                  PieChartSectionData(
+                    value: expenses,
+                    color: Colors.red,
+                    title: "Expenses",
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}
+
+
+//TODO : Still implement the custom graph functionality: Comment out for extra debugging
+
+class ParentWidget extends StatefulWidget {
+  @override
+  _ParentWidgetState createState() => _ParentWidgetState();
+}
+
+class _ParentWidgetState extends State<ParentWidget> {
+  double xValue = 0;
+  double yValue = 0;
+
+  void updateGraphValues(double x, double y) {
+    setState(() {
+      xValue = x;
+      yValue = y;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        CGForm(onUpdate: updateGraphValues), 
+        CustFiPie(xValue: xValue, yValue: yValue), 
+      ],
+    );
+  }
+}
+
+class CustFiPie extends StatelessWidget {
+  final double xValue;
+  final double yValue;
+
+  const CustFiPie({required this.xValue, required this.yValue});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: PieChart(
+        PieChartData(
+          centerSpaceColor: Colors.green,
+          sections: [
+            PieChartSectionData(
+              value: xValue,
+              color: Colors.blue,
+              title: "X Axis",
+            ),
+            PieChartSectionData(
+              value: yValue,
+              color: Colors.orange,
+              title: "Y Axis",
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class CGForm extends StatefulWidget {
+  final Function(double, double) onUpdate;
+
+  const CGForm({required this.onUpdate});
+
+  @override
+  GraphFormState createState() => GraphFormState();
+}
+
+class GraphFormState extends State<CGForm> {
+  String _x = '';
+  String _y = '';
+
+  void updateField(String field, String value) {
+    setState(() {
+      if (field == 'X') {
+        _x = value;
+      } else {
+        _y = value;
+      }
+    });
+    widget.onUpdate(double.tryParse(_x) ?? 0, double.tryParse(_y) ?? 0); 
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        DropdownButtonFormField(
+          value: _x.isEmpty ? null : _x,
+          items: ['0', '10', '20', '30'] 
+              .map((col) => DropdownMenuItem(value: col, child: Text(col)))
+              .toList(),
+          onChanged: (value) => updateField('X', value!),
+        ),
+        DropdownButtonFormField(
+          value: _y.isEmpty ? null : _y,
+          items: ['0', '10', '20', '30']
+              .map((col) => DropdownMenuItem(value: col, child: Text(col)))
+              .toList(),
+          onChanged: (value) => updateField('Y', value!),
+        ),
+      ],
+    );
+  }
+}
+
+// class CustomFiPie extends StatefulWidget {
+
+//   @override
+//   CustFiPieState createState() => CustFiPieState();
+
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: Text(custom_title)),
+//       body: PieChart(
+//         PieChartData(
+//           centerSpaceColor: Colors.green,
+//           sections: [
+//             PieChartSectionData(
+//               value: 0 ,
+//               color: Colors.blue,
+//               title: _x,
+//             ),
+//             PieChartSectionData(
+//               value: 0 ,
+//               color: Colors.orange,
+//               title: _y,
+//             ),
+//           ],
+          
+//         ),
+//       ),
+//     );
+//   }
+// }
+
+// class CustomPieState extends State<CustFiPieState> {
+//   final DatabaseHelper database = DatabaseHelper();
+//   double income = 0.0;
+//   double expenses = 0.0;
+//   bool isLoading = true;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _loadFormData();
+//   }
+
+//   Future<void> _loadFormData() async {
+//     final double x = await GraphFormState;
+//     final double y = await GraphFormState;
+
+//     setState(() {
+//       x_ax = x;
+//       y_ax = y;
+//       isLoading = false;
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(title: const Text(custom_title)),
+//       body: isLoading
+//           ? const Center(child: CircularProgressIndicator())
+//           : PieChart(
+//               PieChartData(
+//                 sections: [
+//                   PieChartSectionData(
+//                     value: income,
+//                     color: Colors.green,
+//                     title: _x,
+//                   ),
+//                   PieChartSectionData(
+//                     value: expenses,
+//                     color: Colors.red,
+//                     title: "_y",
+//                   ),
+//                 ],
+//               ),
+//             ),
+//     );
+//   }
+// }
+
+// class CGForm extends StatefulWidget {
+//   const CGForm({super.key});
+
+//   @override
+//   GraphFormState createState() => GraphFormState();
+// }
+
+// class GraphFormState extends State<CGForm> {
+//   final DatabaseHelper helper = DatabaseHelper();
+//   List<String> columns = [];
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     loadColumns();
+//   }
+
+//   Future<void> loadColumns() async {
+//     final columnNames = await helper.getColumnNames();
+//     setState(() {
+//       columns = columnNames;
+//     });
+//   }
+
+//   void updateField(String field, String value) {
+//     setState(() {
+//       if (field == 'X') {
+//         _x = value;
+//       } else {
+//         _y = value;
+//       }
+//     });
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Column(
+//       children: [
+//         DropdownButtonFormField(
+//           value: _x.isEmpty ? null : _x,
+//           items: columns.map((col) => DropdownMenuItem(value: col, child: Text(col))).toList(),
+//           onChanged: (value) => updateField('X', value!),
+//           decoration: const InputDecoration(labelText: 'X-Axis Variable'),
+//         ),
+//         DropdownButtonFormField(
+//           value: _y.isEmpty ? null : _y,
+//           items: columns.map((col) => DropdownMenuItem(value: col, child: Text(col))).toList(),
+//           onChanged: (value) => updateField('Y', value!),
+//           decoration: const InputDecoration(labelText: 'Y-Axis Variable'),
+//         ),
+//       ],
+//     );
+//   }
+// }
+
+// class CGForm extends StatefulWidget { 
+//   @override 
+//   GraphFormState createState() => GraphFormState(); 
+// } 
+  
+// class GraphFormState extends State<CGForm> { 
+//   final GlobalKey<FormState> _formKey = GlobalKey<FormState>(); 
+
+//   void _submitForm() { 
+    
+//     if (_formKey.currentState!.validate()) { 
+//       _formKey.currentState!.save(); 
+//       print('X-Axis: $_x'); 
+//       print('Y-Axis: $_y');  
+//       custom_title = String.join(_y ,"vs" , _x);
+//     } 
+//   } 
+  
+//   @override 
+//   Widget build(BuildContext context) { 
+//     return Scaffold( 
+//       appBar: AppBar( 
+//         title: Text('Generate Graph'), 
+//       ), 
+//       body: Form( 
+//         key: _formKey, 
+//         child: Padding( 
+//           padding: EdgeInsets.all(16.0), 
+//           child: Column( 
+//             children: <Widget>[ 
+//               TextFormField( 
+//                 decoration: InputDecoration(labelText: 'Independent Variable'), 
+//                 validator: (value) { 
+//                   if (value!.isEmpty) { 
+//                     return 'Please enter an X.'; 
+//                   } 
+//                   else if (value not in database.getColumnNames ){
+//                     return "Must be one of the follwing $database.getColumnNames"
+//                   }
+//                   return null; 
+//                 }, 
+//                 onSaved: (value) { 
+//                   _x = value!; // Save the entered name 
+//                 }, 
+//               ), 
+//               TextFormField( 
+//                 decoration: InputDecoration(labelText: 'Dependent Variable'),  
+//                 validator: (value) { 
+//                   if (value!.isEmpty) { 
+//                     return 'Please enter a Y.'; 
+//                   } 
+//                   else if ( value not in database.getColumnNames ){
+//                     return "Must be one of the follwing $database.getColumnNames"
+//                   }
+//                   return null; // Return null if the email is valid 
+//                 }, 
+//                 onSaved: (value) { 
+//                   _y = value!;
+//                 }, 
+//               ), 
+//               SizedBox(height: 20.0), 
+//               ElevatedButton( 
+//                 onPressed: _submitForm, 
+//                 child: Text('Generate'), 
+//               ), 
+//             ], 
+//           ), 
+//         ), 
+//       ), 
+//     ); 
+//   } 
+// } 
