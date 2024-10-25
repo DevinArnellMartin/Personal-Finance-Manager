@@ -1,13 +1,9 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart'; 
 import 'helper.dart';
 import 'package:fl_chart/fl_chart.dart';
 
 String custom_title = "";
-// String _x = "";  
-// String _y = ""; 
-// final DatabaseHelper database = DatabaseHelper();
 
 void main() {
   runApp(const FinanceApp());
@@ -220,7 +216,7 @@ class _GraphScreenState extends State<GraphScreen> {
         children: [
           const Expanded(
             child: Center(
-              child: Text('Graph will be here (select X and Y axes)'),
+              child: Text("Custom Graph"),
             ),
           ),
           LinearProgressIndicator(
@@ -261,9 +257,9 @@ class _FiPieState extends State<FiPie> {
     _loadData();
   }
 
-  Future<void> _loadData() async {
-    final double fetchedIncome = await database.getIncome();
-    final double fetchedExpenses = await database.getExpenses();
+  Future<void> _loadData() async { //diff on unpublished helper.dart
+    final double fetchedIncome = await database.getIncomeByName();
+    final double fetchedExpenses = await database.getExpensesByName();
 
     setState(() {
       income = fetchedIncome;
@@ -370,6 +366,9 @@ class CGForm extends StatefulWidget {
 class GraphFormState extends State<CGForm> {
   String _x = '';
   String _y = '';
+  final DatabaseHelper helper = DatabaseHelper();
+  List<String> x_records = [];
+  List<String> y_records = []; //not actual records: the column names
 
   void updateField(String field, String value) {
     setState(() {
@@ -383,19 +382,34 @@ class GraphFormState extends State<CGForm> {
   }
 
   @override
+  void initState() {
+    super.initState();
+    loadColumns();
+  }
+
+  Future<void> loadColumns() async {
+    final List<String> columns = await helper.getColumnNames();
+
+    setState(() {
+      x_records = columns;
+      y_records = columns;
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         DropdownButtonFormField(
           value: _x.isEmpty ? null : _x,
-          items: ['0', '10', '20', '30'] 
+          items: x_records
               .map((col) => DropdownMenuItem(value: col, child: Text(col)))
               .toList(),
           onChanged: (value) => updateField('X', value!),
         ),
         DropdownButtonFormField(
           value: _y.isEmpty ? null : _y,
-          items: ['0', '10', '20', '30']
+          items: y_records
               .map((col) => DropdownMenuItem(value: col, child: Text(col)))
               .toList(),
           onChanged: (value) => updateField('Y', value!),
