@@ -1,58 +1,29 @@
-import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; 
-import 'helper.dart';
-import 'package:fl_chart/fl_chart.dart';
+import 'dart:io';
 
-String custom_title = "";
+import 'package:fl_chart/fl_chart.dart';
+import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const FinanceApp());
 }
 
 class FinanceApp extends StatefulWidget {
-  const FinanceApp({super.key});  
+  const FinanceApp({super.key});
 
   @override
   _FinanceAppState createState() => _FinanceAppState();
 }
 
 class _FinanceAppState extends State<FinanceApp> {
-  late Future<void> _dbInitFuture;
-  final DatabaseHelper database = DatabaseHelper();
-
-  @override
-  void initState() {
-    super.initState();
-    _dbInitFuture = database.init();
-  }
-
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder(
-      future: _dbInitFuture,  
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.done) {
-          return MaterialApp(
-            home: const HomeScreen(),
-            routes: {
-              '/verbose': (context) => const DataEntryScreen(),
-              '/visuals': (context) => const GraphScreen(),
-            },
-          );
-        } else if (snapshot.hasError) {
-          return const MaterialApp(
-            home: Scaffold(
-              body: Center(child: Text('Error initializing database')),
-            ),
-          );
-        } else {
-        
-          return const MaterialApp(
-            home: Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        }
+    return MaterialApp(
+      home: const HomeScreen(),
+      routes: {
+        '/dataEntry': (context) => const DataEntryScreen(),
+        '/graph': (context) => const GraphScreen(),
       },
     );
   }
@@ -64,50 +35,41 @@ class HomeScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Personal Finance Manager'),
+      appBar: AppBar(title: const Text('Personal Finance Manager')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'Welcome to the Personal Finance Manager!',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Track your income, expenses, and savings goals in one place.',
+              style: TextStyle(fontSize: 16),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/dataEntry');
+              },
+              child: const Text('Enter Financial Data'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pushNamed(context, '/graph');
+              },
+              child: const Text('View Graph'),
+            ),
+          ],
+        ),
       ),
-      body: const Center(
-        child: Text('Here is the tutorial how to use it '), //Embellish
-      ),
-      bottomNavigationBar: const BottomNavBar(),
     );
   }
 }
 
-// Navigation 
-class BottomNavBar extends StatelessWidget {
-  const BottomNavBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      items: const [
-        BottomNavigationBarItem(
-          icon: Icon(Icons.home),
-          label: 'Home',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.input),
-          label: 'Enter Your Information',
-        ),
-        BottomNavigationBarItem(
-          icon: Icon(Icons.bar_chart),
-          label: 'At a Glance...',
-        ),
-      ],
-      onTap: (index) {
-        if (index == 1) {
-          Navigator.pushNamed(context, '/verbose');
-        } else if (index == 2) {
-          Navigator.pushNamed(context, '/visuals');
-        }
-      },
-    );
-  }
-}
-
-// Data Entry Screen
 class DataEntryScreen extends StatefulWidget {
   const DataEntryScreen({super.key});
 
@@ -116,38 +78,38 @@ class DataEntryScreen extends StatefulWidget {
 }
 
 class _DataEntryScreenState extends State<DataEntryScreen> {
-  final TextEditingController incControl = TextEditingController();
-  final TextEditingController expControl = TextEditingController();
-  final TextEditingController debtControl = TextEditingController();
-  final TextEditingController savingsControl = TextEditingController();
-  final TextEditingController nameControl = TextEditingController();
+  final TextEditingController incomeController = TextEditingController();
+  final TextEditingController expenseController = TextEditingController();
+  final TextEditingController savingsController = TextEditingController();
+  final TextEditingController debtController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  XFile? profileImage;
 
   @override
   void dispose() {
-    incControl.dispose();
-    expControl.dispose();
-    savingsControl.dispose();
-    debtControl.dispose();
-    nameControl.dispose();
+    incomeController.dispose();
+    expenseController.dispose();
+    savingsController.dispose();
+    debtController.dispose();
+    nameController.dispose();
     super.dispose();
   }
 
   Future<void> saveData() async {
-    SharedPreferences prefs = await SharedPreferences.getInstance();
-    
-    int income = int.parse(incControl.text);
-    int expense = int.parse(expControl.text);
-    int savingsGoal = int.parse(savingsControl.text);
-    String name = nameControl.text; 
-    double debt = double.parse(debtControl.text); 
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setString('name', nameController.text);
+    await prefs.setInt('income', int.parse(incomeController.text));
+    await prefs.setInt('expense', int.parse(expenseController.text));
+    await prefs.setInt('savings', int.parse(savingsController.text));
+    await prefs.setDouble('debt', double.parse(debtController.text));
+  }
 
-    
-    double incomeSpendingRatio = income / expense;
-    await prefs.setString('name', name);
-    await prefs.setInt('income', income);
-    await prefs.setInt('expense', expense);
-    await prefs.setInt('savingsGoal', savingsGoal);
-    await prefs.setDouble('income-spending ratio', incomeSpendingRatio);
+  Future<void> pickImage() async {
+    final ImagePicker picker = ImagePicker();
+    final XFile? image = await picker.pickImage(source: ImageSource.gallery);
+    setState(() {
+      profileImage = image;
+    });
   }
 
   @override
@@ -156,48 +118,59 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
       appBar: AppBar(title: const Text('Enter Financial Data')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            TextField(
-              controller: incControl,
-              decoration: const InputDecoration(labelText: 'Income'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: incControl,
-              decoration: const InputDecoration(labelText: 'Income'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: expControl,
-              decoration: const InputDecoration(labelText: 'Expenses'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: savingsControl,
-              decoration: const InputDecoration(labelText: 'Savings Goal'),
-              keyboardType: TextInputType.number,
-            ),
-            TextField(
-              controller: debtControl,
-              decoration: const InputDecoration(labelText: 'Debt'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () {
-                saveData();
-              },
-              child: const Text('Save'),
-            ),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              GestureDetector(
+                onTap: pickImage,
+                child: CircleAvatar(
+                  radius: 50,
+                  backgroundImage: profileImage != null
+                      ? FileImage(File(profileImage!.path))
+                      : null,
+                  child: profileImage == null
+                      ? const Icon(Icons.person, size: 50)
+                      : null,
+                ),
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: nameController,
+                decoration: const InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: incomeController,
+                decoration: const InputDecoration(labelText: 'Income'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: expenseController,
+                decoration: const InputDecoration(labelText: 'Expenses'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: savingsController,
+                decoration: const InputDecoration(labelText: 'Savings Goal'),
+                keyboardType: TextInputType.number,
+              ),
+              TextField(
+                controller: debtController,
+                decoration: const InputDecoration(labelText: 'Debt'),
+                keyboardType: TextInputType.number,
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: saveData,
+                child: const Text('Save Data'),
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-// Graph Screen and Form
 class GraphScreen extends StatefulWidget {
   const GraphScreen({super.key});
 
@@ -206,219 +179,143 @@ class GraphScreen extends StatefulWidget {
 }
 
 class _GraphScreenState extends State<GraphScreen> {
-  double progress = 0.0;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Graph and Progress')),
-      body: Column(
-        children: [
-          const Expanded(
-            child: Center(
-              child: Text("Custom Graph"),
-            ),
-          ),
-          LinearProgressIndicator(
-            value: progress,
-            backgroundColor: Colors.grey[300],
-            valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
-          ),
-          const SizedBox(height: 20),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                progress += 0.1;
-                if (progress > 1) progress = 1;
-              });
-            },
-            child: const Text('Update Progress'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class FiPie extends StatefulWidget {
-  @override
-  _FiPieState createState() => _FiPieState();
-}
-
-class _FiPieState extends State<FiPie> {
-  final DatabaseHelper database = DatabaseHelper();
   double income = 0.0;
   double expenses = 0.0;
-  bool isLoading = true;
+  double savings = 0.0;
+  bool isBarGraph = true;
+  String selectedParameter = 'Income vs Expenses';
+  Color selectedColor = Colors.blue;
+  List<Color> colorOptions = [Colors.blue, Colors.red, Colors.green, Colors.orange, Colors.purple];
 
   @override
   void initState() {
     super.initState();
-    _loadData();
+    loadGraphData();
   }
 
-  Future<void> _loadData() async { //diff on unpublished helper.dart
-    final double fetchedIncome = await database.getIncomeByName();
-    final double fetchedExpenses = await database.getExpensesByName();
-
+  Future<void> loadGraphData() async {
+    final prefs = await SharedPreferences.getInstance();
     setState(() {
-      income = fetchedIncome;
-      expenses = fetchedExpenses;
-      isLoading = false;
+      income = prefs.getInt('income')?.toDouble() ?? 0;
+      expenses = prefs.getInt('expense')?.toDouble() ?? 0;
+      savings = prefs.getInt('savings')?.toDouble() ?? 0;
     });
+  }
+
+  Widget buildGraph() {
+    switch (selectedParameter) {
+      case 'Income vs Expenses':
+        return isBarGraph ? buildBarGraph([income, expenses]) : buildLineGraph([income, expenses]);
+      case 'Savings Over Time':
+        return isBarGraph ? buildBarGraph([savings]) : buildLineGraph([savings]);
+      default:
+        return Container();
+    }
+  }
+
+  Widget buildBarGraph(List<double> data) {
+    return BarChart(
+      BarChartData(
+        barGroups: data
+            .asMap()
+            .entries
+            .map((entry) => BarChartGroupData(
+                  x: entry.key,
+                  barRods: [
+                    BarChartRodData(
+                      toY: entry.value,
+                      color: selectedColor,
+                      width: 20,
+                    ),
+                  ],
+                ))
+            .toList(),
+        titlesData: FlTitlesData(show: true),
+      ),
+    );
+  }
+
+  Widget buildLineGraph(List<double> data) {
+    return LineChart(
+      LineChartData(
+        lineBarsData: [
+          LineChartBarData(
+            spots: data
+                .asMap()
+                .entries
+                .map((entry) => FlSpot(entry.key.toDouble(), entry.value))
+                .toList(),
+            isCurved: true,
+            color: selectedColor,
+            barWidth: 4,
+          ),
+        ],
+        titlesData: FlTitlesData(show: true),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Income Vs Expense")),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : PieChart(
-              PieChartData(
-                sections: [
-                  PieChartSectionData(
-                    value: income,
-                    color: Colors.green,
-                    title: "Income",
-                  ),
-                  PieChartSectionData(
-                    value: expenses,
-                    color: Colors.red,
-                    title: "Expenses",
-                  ),
-                ],
-              ),
+      appBar: AppBar(title: const Text('Custom Graphs')),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                ElevatedButton(
+                  onPressed: () => setState(() => isBarGraph = true),
+                  child: const Text('Bar Graph'),
+                ),
+                ElevatedButton(
+                  onPressed: () => setState(() => isBarGraph = false),
+                  child: const Text('Line Graph'),
+                ),
+              ],
             ),
-    );
-  }
-}
-
-
-//TODO : Still implement the custom graph functionality: Comment out for extra debugging
-
-class ParentWidget extends StatefulWidget {
-  @override
-  _ParentWidgetState createState() => _ParentWidgetState();
-}
-
-class _ParentWidgetState extends State<ParentWidget> {
-  double xValue = 0;
-  double yValue = 0;
-
-  void updateGraphValues(double x, double y) {
-    setState(() {
-      xValue = x;
-      yValue = y;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        CGForm(onUpdate: updateGraphValues), 
-        CustFiPie(xValue: xValue, yValue: yValue), 
-      ],
-    );
-  }
-}
-
-class CustFiPie extends StatelessWidget {
-  final double xValue;
-  final double yValue;
-
-  const CustFiPie({required this.xValue, required this.yValue});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: PieChart(
-        PieChartData(
-          centerSpaceColor: Colors.green,
-          sections: [
-            PieChartSectionData(
-              value: xValue,
-              color: Colors.blue,
-              title: "X Axis",
+            DropdownButton<String>(
+              value: selectedParameter,
+              items: ['Income vs Expenses', 'Savings Over Time']
+                  .map((String value) => DropdownMenuItem<String>(
+                        value: value,
+                        child: Text(value),
+                      ))
+                  .toList(),
+              onChanged: (String? newValue) {
+                setState(() {
+                  selectedParameter = newValue!;
+                });
+              },
             ),
-            PieChartSectionData(
-              value: yValue,
-              color: Colors.orange,
-              title: "Y Axis",
+            DropdownButton<Color>(
+              value: selectedColor,
+              items: colorOptions
+                  .map((Color color) => DropdownMenuItem<Color>(
+                        value: color,
+                        child: Container(
+                          width: 100,
+                          height: 20,
+                          color: color,
+                        ),
+                      ))
+                  .toList(),
+              onChanged: (Color? newColor) {
+                setState(() {
+                  selectedColor = newColor!;
+                });
+              },
             ),
+            const SizedBox(height: 20),
+            Expanded(child: buildGraph()),
           ],
         ),
       ),
     );
   }
 }
-
-class CGForm extends StatefulWidget {
-  final Function(double, double) onUpdate;
-
-  const CGForm({required this.onUpdate});
-
-  @override
-  GraphFormState createState() => GraphFormState();
-}
-
-class GraphFormState extends State<CGForm> {
-  String _x = '';
-  String _y = '';
-  final DatabaseHelper helper = DatabaseHelper();
-  List<String> x_records = [];
-  List<String> y_records = []; //not actual records: the column names
-
-  void updateField(String field, String value) {
-    setState(() {
-      if (field == 'X') {
-        _x = value;
-      } else {
-        _y = value;
-      }
-    });
-    widget.onUpdate(double.tryParse(_x) ?? 0, double.tryParse(_y) ?? 0); 
-  }
-
-  @override
-  void initState() {
-    super.initState();
-    loadColumns();
-  }
-
-  Future<void> loadColumns() async {
-    final List<String> columns = await helper.getColumnNames();
-
-    setState(() {
-      x_records = columns;
-      y_records = columns;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DropdownButtonFormField(
-          value: _x.isEmpty ? null : _x,
-          items: x_records
-              .map((col) => DropdownMenuItem(value: col, child: Text(col)))
-              .toList(),
-          onChanged: (value) => updateField('X', value!),
-        ),
-        DropdownButtonFormField(
-          value: _y.isEmpty ? null : _y,
-          items: y_records
-              .map((col) => DropdownMenuItem(value: col, child: Text(col)))
-              .toList(),
-          onChanged: (value) => updateField('Y', value!),
-        ),
-      ],
-    );
-  }
-}
-
 // class CustomFiPie extends StatefulWidget {
 
 //   @override
