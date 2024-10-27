@@ -1,10 +1,17 @@
 # finance_manager
 
-A new Flutter project.
+A personal finance manager app with  CRUD Functionaility and graphing functionality 
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+How To Run:
+1.Donwload the code.
+2.Run "flutter pub get" from terminal to get all relevant dependencies
+3.Enjoy!
+
+Link:
+PPT:
+
 
 A few resources to get you started if this is your first Flutter project:
 
