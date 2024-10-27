@@ -39,7 +39,7 @@ class HomeScreen extends StatelessWidget {
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             const Text(
               'Welcome to the Personal Finance Manager!',
@@ -63,6 +63,7 @@ class HomeScreen extends StatelessWidget {
               },
               child: const Text('View Graph'),
             ),
+           Image.asset('images/homePicture.jpg'),
           ],
         ),
       ),
@@ -99,6 +100,7 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
   Future<void> saveData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
 
+// allows data to be saved to a list
     Map<String, dynamic> newEntry = {
       'name': nameController.text,
       'income': int.tryParse(incomeController.text) ?? 0,
@@ -106,7 +108,14 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
       'savings': int.tryParse(savingsController.text) ?? 0,
       'debt': double.tryParse(debtController.text) ?? 0.0,
     };
-    
+
+// get data saved from entry to be used in graphs
+    await prefs.setString('name', nameController.text);
+    await prefs.setInt('income', int.parse(incomeController.text));
+    await prefs.setInt('expense', int.parse(expenseController.text));
+    await prefs.setInt('savings', int.parse(savingsController.text));
+    await prefs.setDouble('debt', double.parse(debtController.text));
+
  setState(() {
       savedEntries.add(newEntry);
     });
@@ -176,11 +185,11 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
               const SizedBox(height: 20),
               const Divider(),
               const Text(
-             'Previous Entries: ',
+            'Previous Entries: ',
                 style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
                             const SizedBox(height: 10),
-              // Display the saved data in a scrollable ListView
+              // Display all previously entered data
               SizedBox(
                 height: 300,
                 child: ListView.builder(
@@ -272,7 +281,7 @@ class _GraphScreenState extends State<GraphScreen> {
                   ],
                 ))
             .toList(),
-        titlesData: FlTitlesData(show: true),
+        titlesData: const FlTitlesData(show: true),
       ),
     );
   }
@@ -292,7 +301,7 @@ class _GraphScreenState extends State<GraphScreen> {
             barWidth: 4,
           ),
         ],
-        titlesData: FlTitlesData(show: true),
+        titlesData: const FlTitlesData(show: true),
       ),
     );
   }
