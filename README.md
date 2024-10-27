@@ -9,8 +9,7 @@ How To Run:
 2.Run "flutter pub get" from terminal to get all relevant dependencies
 3.Enjoy!
 
-Link:
-PPT:
+Link:https://youtu.be/G13nbc4ww7Y
 
 
 A few resources to get you started if this is your first Flutter project:
