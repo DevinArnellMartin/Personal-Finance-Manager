@@ -47,7 +47,7 @@ class HomeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 10),
             const Text(
-              'Track your income, expenses, and savings goals in one place.',
+              'Tutorial: Go into the Enter Finance data page to enter your Income, Expenses, Savings Goal, name, and debt',
               style: TextStyle(fontSize: 16),
             ),
             const SizedBox(height: 10),
@@ -84,6 +84,7 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
   final TextEditingController debtController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   XFile? profileImage;
+  List<Map<String, dynamic>> savedEntries = [];
 
   @override
   void dispose() {
@@ -97,12 +98,21 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
 
   Future<void> saveData() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setString('name', nameController.text);
-    await prefs.setInt('income', int.parse(incomeController.text));
-    await prefs.setInt('expense', int.parse(expenseController.text));
-    await prefs.setInt('savings', int.parse(savingsController.text));
-    await prefs.setDouble('debt', double.parse(debtController.text));
+
+    Map<String, dynamic> newEntry = {
+      'name': nameController.text,
+      'income': int.tryParse(incomeController.text) ?? 0,
+      'expense': int.tryParse(expenseController.text) ?? 0,
+      'savings': int.tryParse(savingsController.text) ?? 0,
+      'debt': double.tryParse(debtController.text) ?? 0.0,
+    };
+    
+ setState(() {
+      savedEntries.add(newEntry);
+    });
+
   }
+
 
   Future<void> pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -162,6 +172,38 @@ class _DataEntryScreenState extends State<DataEntryScreen> {
               ElevatedButton(
                 onPressed: saveData,
                 child: const Text('Save Data'),
+              ),
+              const SizedBox(height: 20),
+              const Divider(),
+              const Text(
+             'Previous Entries: ',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+                            const SizedBox(height: 10),
+              // Display the saved data in a scrollable ListView
+              SizedBox(
+                height: 300,
+                child: ListView.builder(
+                  itemCount: savedEntries.length,
+                  itemBuilder: (context, index) {
+                    final entry = savedEntries[index];
+                    return Card(
+                      margin: const EdgeInsets.symmetric(vertical: 5),
+                      child: ListTile(
+                        title: Text('Name: ${entry['name']}'),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Income: \$${entry['income']}'),
+                            Text('Expenses: \$${entry['expense']}'),
+                            Text('Savings: \$${entry['savings']}'),
+                            Text('Debt: \$${entry['debt']}'),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ],
           ),
